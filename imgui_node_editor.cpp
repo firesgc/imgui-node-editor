@@ -1072,6 +1072,7 @@ ed::EditorContext::EditorContext(const ax::NodeEditor::Config* config)
     , m_EditorActiveId(0)
     , m_IsFirstFrame(true)
     , m_IsFocused(false)
+    , m_IsLocked(false)
     , m_IsHovered(false)
     , m_IsHoveredWithoutOverlapp(false)
     , m_ShortcutsEnabled(true)
@@ -1761,6 +1762,11 @@ void ed::EditorContext::RemoveSettings(Object* object)
     }
 }
 
+void ed::EditorContext::SetLocked(bool aLocked)
+{
+    m_IsLocked = aLocked;
+}
+
 void ed::EditorContext::ClearSelection()
 {
     for (auto& object : m_SelectedObjects)
@@ -1989,6 +1995,11 @@ bool ed::EditorContext::IsSuspended()
     return m_Canvas.IsSuspended();
 }
 
+bool ed::EditorContext::IsLocked() const
+{
+    return m_IsLocked;
+}
+
 bool ed::EditorContext::IsFocused()
 {
     return m_IsFocused;
@@ -2005,6 +2016,11 @@ bool ed::EditorContext::IsHoveredWithoutOverlapp() const
 }
 
 bool ed::EditorContext::CanAcceptUserInput() const
+{
+    return !m_IsLocked && m_IsFocused && m_IsHovered;
+}
+
+bool ed::EditorContext::CanNavigate() const
 {
     return m_IsFocused && m_IsHovered;
 }
@@ -3323,7 +3339,7 @@ ed::EditorAction::AcceptResult ed::NavigateAction::Accept(const Control& control
     if (m_IsActive)
         return False;
 
-    if (Editor->CanAcceptUserInput() /*&& !ImGui::IsAnyItemActive()*/ && ImGui::IsMouseDragging(Editor->GetConfig().NavigateButtonIndex, 0.0f))
+    if (Editor->CanNavigate() /*&& !ImGui::IsAnyItemActive()*/ && ImGui::IsMouseDragging(Editor->GetConfig().NavigateButtonIndex, 0.0f))
     {
         m_IsActive    = true;
         m_ScrollStart = m_Scroll;
@@ -3333,7 +3349,7 @@ ed::EditorAction::AcceptResult ed::NavigateAction::Accept(const Control& control
 
     auto& io = ImGui::GetIO();
 
-    if (Editor->CanAcceptUserInput() && ImGui::IsKeyPressed(GetKeyIndexForF()) && Editor->AreShortcutsEnabled())
+    if (Editor->CanNavigate() && ImGui::IsKeyPressed(GetKeyIndexForF()) && Editor->AreShortcutsEnabled())
     {
         const auto zoomMode = io.KeyShift ? NavigateAction::ZoomMode::WithMargin : NavigateAction::ZoomMode::None;
 
@@ -3449,7 +3465,8 @@ bool ed::NavigateAction::HandleZoom(const Control& control)
     m_Animation.Finish();
 
     auto mousePos = io.MousePos;
-    auto newZoom  = GetNextZoom(io.MouseWheel);
+    auto steps    = (int)io.MouseWheel;
+    auto newZoom  = MatchZoom(steps, m_ZoomLevels[steps < 0 ? 0 : m_ZoomLevelCount - 1]);
 
     auto oldView   = GetView();
     m_Zoom = newZoom;
@@ -4076,7 +4093,7 @@ ed::EditorAction::AcceptResult ed::SelectAction::Accept(const Control& control)
 
     m_SelectedObjectsAtStart.clear();
 
-    if (Editor->CanAcceptUserInput() && control.BackgroundHot && ImGui::IsMouseDragging(Editor->GetConfig().SelectButtonIndex, 1))
+    if (Editor->CanNavigate() && control.BackgroundHot && ImGui::IsMouseDragging(Editor->GetConfig().SelectButtonIndex, 1))
     {
         m_IsActive = true;
         m_StartPoint = ImGui_GetMouseClickPos(Editor->GetConfig().SelectButtonIndex);
@@ -4391,15 +4408,15 @@ ed::EditorAction::AcceptResult ed::ShortcutAction::Accept(const Control& control
     Action candidateAction = None;
 
     auto& io = ImGui::GetIO();
-    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_X)))
+    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_X))
         candidateAction = Cut;
-    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C)))
+    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_C))
         candidateAction = Copy;
-    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_V)))
+    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_V))
         candidateAction = Paste;
-    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(GetKeyIndexForD()))
+    if (io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_D))
         candidateAction = Duplicate;
-    if (!io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Space)))
+    if (!io.KeyCtrl && !io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_Space))
         candidateAction = CreateNode;
 
     if (candidateAction != None)
@@ -4953,7 +4970,7 @@ ed::EditorAction::AcceptResult ed::DeleteItemsAction::Accept(const Control& cont
         return False;
 
     auto& io = ImGui::GetIO();
-    if (Editor->CanAcceptUserInput() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) && Editor->AreShortcutsEnabled())
+    if (Editor->CanAcceptUserInput() && ImGui::IsKeyPressed(ImGuiKey_Delete) && Editor->AreShortcutsEnabled())
     {
         auto& selection = Editor->GetSelectedObjects();
         if (!selection.empty())

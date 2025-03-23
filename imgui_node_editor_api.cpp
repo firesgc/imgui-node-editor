@@ -491,6 +491,16 @@ bool ax::NodeEditor::IsLinkSelected(LinkId linkId)
         return false;
 }
 
+bool ax::NodeEditor::IsLocked()
+{
+    return s_Editor->IsLocked();
+}
+
+void ax::NodeEditor::SetLocked(bool aLocked)
+{
+    s_Editor->SetLocked(aLocked);
+}
+
 void ax::NodeEditor::ClearSelection()
 {
     s_Editor->ClearSelection();
@@ -532,6 +542,9 @@ void ax::NodeEditor::DeselectLink(LinkId linkId)
 
 bool ax::NodeEditor::DeleteNode(NodeId nodeId)
 {
+    if (s_Editor->IsLocked())
+        return false;
+
     if (auto node = s_Editor->FindNode(nodeId))
         return s_Editor->GetItemDeleter().Add(node);
     else
@@ -540,6 +553,9 @@ bool ax::NodeEditor::DeleteNode(NodeId nodeId)
 
 bool ax::NodeEditor::DeleteLink(LinkId linkId)
 {
+    if (s_Editor->IsLocked())
+        return false;
+
     if (auto link = s_Editor->FindLink(linkId))
         return s_Editor->GetItemDeleter().Add(link);
     else

@@ -1331,6 +1331,8 @@ struct EditorContext
 
     void RemoveSettings(Object* object);
 
+    void SetLocked(bool aLocked);
+
     void ClearSelection();
     void SelectObject(Object* object);
     void DeselectObject(Object* object);
@@ -1366,10 +1368,12 @@ struct EditorContext
     void Resume(SuspendFlags flags = SuspendFlags::None);
     bool IsSuspended();
 
+    bool IsLocked() const;
     bool IsFocused();
     bool IsHovered() const;
     bool IsHoveredWithoutOverlapp() const;
     bool CanAcceptUserInput() const;
+    bool CanNavigate() const;
 
     void MakeDirty(SaveReasonFlags reason);
     void MakeDirty(SaveReasonFlags reason, Node* node);
@@ -1488,6 +1492,7 @@ private:
     ImGuiID             m_EditorActiveId;
     bool                m_IsFirstFrame;
     bool                m_IsFocused;
+    bool                m_IsLocked;
     bool                m_IsHovered;
     bool                m_IsHoveredWithoutOverlapp;
 

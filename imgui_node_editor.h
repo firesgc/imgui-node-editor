@@ -15,7 +15,7 @@
 
 
 //------------------------------------------------------------------------------
-# include <imgui.h>
+# include <imgui/imgui.h>
 # include <cstdint> // std::uintXX_t
 # include <utility> // std::move
 
@@ -358,6 +358,9 @@ IMGUI_NODE_EDITOR_API void SetNodeZPosition(NodeId nodeId, float z); // Sets nod
 IMGUI_NODE_EDITOR_API float GetNodeZPosition(NodeId nodeId); // Returns node z position, defaults is 0.0f
 
 IMGUI_NODE_EDITOR_API void RestoreNodeState(NodeId nodeId);
+
+IMGUI_NODE_EDITOR_API bool IsLocked();
+IMGUI_NODE_EDITOR_API void SetLocked(bool aLocked);
 
 IMGUI_NODE_EDITOR_API void Suspend();
 IMGUI_NODE_EDITOR_API void Resume();
